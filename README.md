@@ -1,10 +1,102 @@
-# บ้านร้าน POS
+<div align="center">
 
-แอป POS ภาษาไทยสำหรับร้านชำเครื่องเดียว ใช้ React + TypeScript, Express, Prisma, SQLite และ Tauri 2 สำหรับ Windows
+# 🏪 บ้านร้าน POS
 
-## ทดลองใช้งาน
+**ระบบขายหน้าร้านภาษาไทย สำหรับร้านชำและร้านค้าปลีกขนาดเล็ก**
 
-ต้องมี Node.js 24 ขึ้นไป ติดตั้ง dependencies ครั้งแรกต้องใช้อินเทอร์เน็ต หลังจากนั้นตัวแอปทำงานในเครื่องและใช้ฟอนต์ที่บรรจุมาด้วย
+[![Platform](https://img.shields.io/badge/Platform-Windows-0078d4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com)
+[![React](https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Tauri](https://img.shields.io/badge/Tauri-2-ffc131?style=for-the-badge&logo=tauri&logoColor=black)](https://tauri.app)
+[![SQLite](https://img.shields.io/badge/SQLite-Prisma-003b57?style=for-the-badge&logo=sqlite&logoColor=white)](https://prisma.io)
+
+<br/>
+
+> ทำงาน **Offline-first** — ข้อมูลเก็บในเครื่อง ไม่ต้องใช้อินเทอร์เน็ตหลังติดตั้ง
+> รองรับทั้ง **เว็บเบราว์เซอร์** และ **แอปเดสก์ท็อป (Windows)**
+
+</div>
+
+---
+
+## 📥 ดาวน์โหลดและติดตั้ง
+
+> **รุ่นล่าสุด: v0.1.0** — ทดสอบแล้วบน Windows 10/11 (x64)
+
+| ไฟล์                               | ขนาด   | คำอธิบาย                                                                     |
+| ---------------------------------- | ------ | ---------------------------------------------------------------------------- |
+| `Baan Ran POS_0.1.0_x64-setup.exe` | ~38 MB | ตัวติดตั้ง Windows 64-bit (NSIS) ที่ `src-tauri/target/release/bundle/nsis/` |
+
+### ✅ สิ่งที่รวมมาในตัวติดตั้ง
+
+- Node.js runtime (bundled — ไม่ต้องติดตั้งแยก)
+- Express API server + Prisma native engine
+- React frontend (pre-built) + ฟอนต์ภาษาไทย (Noto Sans Thai)
+- Database migrations
+
+### ⚠️ ข้อควรทราบก่อนติดตั้ง
+
+- ต้องมี **WebView2 Runtime** — จะดาวน์โหลดอัตโนมัติหากยังไม่มีในเครื่อง
+- ตัวติดตั้ง **ยังไม่มี code signing** — Windows อาจแสดงคำเตือน SmartScreen ให้กด "More info → Run anyway"
+- หลังติดตั้ง ข้อมูลร้านจะเก็บที่ `%LOCALAPPDATA%\com.baanran.pos\`
+
+### 🗂️ ตำแหน่งข้อมูลหลังติดตั้ง
+
+```
+%LOCALAPPDATA%\com.baanran.pos\
+├── store.db          ← ฐานข้อมูลร้าน
+├── backups/          ← ไฟล์สำรองข้อมูลอัตโนมัติ
+└── server.log        ← log ของ backend
+```
+
+---
+
+## ✨ สิ่งที่ทำได้
+
+### 🛒 ขายหน้าร้าน
+
+- เลือกสินค้าจากหน้าจอ หรือสแกน/กรอกบาร์โค้ด
+- ค้นหาจากชื่อ/บาร์โค้ด กรองหมวดหมู่ เพิ่ม/ลดจำนวน ลบรายการ ล้างบิล
+- ส่วนลดทั้งบิล รับเงินสด คำนวณเงินทอน ป้องกันเงินรับไม่พอ
+- ตะกร้าคงอยู่เมื่อสลับหน้าหรือเปิดแอปใหม่ใน browser profile เดิม
+
+### 📦 จัดการสินค้าและสต็อก
+
+- เพิ่ม/แก้ไข/ซ่อนสินค้า (soft delete) รับสินค้าเข้า ปรับสต็อกพร้อมระบุเหตุผลและผู้ทำรายการ
+- แจ้งเตือนเมื่อสต็อกเป็น 0 หรือต่ำกว่าจุดสั่งซื้อ + หน้ารวมสินค้าใกล้หมด
+- บันทึกสต็อก, บิล และ StockMovement ใน transaction เดียว
+
+### 📊 รายงานและประวัติ
+
+- รายงานวัน/เดือน/ปี ตามเวลา Asia/Bangkok กราฟแนวโน้ม สินค้าขายดี/ขายน้อย
+- ส่งออก CSV ดู 100 บิลล่าสุด พิมพ์ใบเสร็จซ้ำ คืนทั้งบิลโดยเจ้าของร้านพร้อมคืนสต็อก
+
+### 🔐 ความปลอดภัยและบัญชี
+
+- บัญชีเจ้าของร้าน (owner) และพนักงาน (cashier) รหัสผ่านผ่าน scrypt, HttpOnly session cookie
+- จำกัดความถี่การลองรหัสผ่าน (10 ครั้ง/นาที/IP)
+- สำรองฐานข้อมูลอัตโนมัติวันละครั้ง + สำรองด้วยตนเองทุกเมื่อ
+
+---
+
+## ⌨️ คีย์ลัด
+
+| คีย์      | การทำงาน                               |
+| --------- | -------------------------------------- |
+| **F2**    | โฟกัสช่องค้นหาสินค้า                   |
+| **F4**    | เปิดหน้าต่างรับชำระเงิน                |
+| **Enter** | เพิ่มสินค้าตามบาร์โค้ดที่ตรงกัน        |
+| **Esc**   | ปิดหน้าต่าง (ยกเว้นบิลที่ยังไม่ทราบผล) |
+
+> เครื่องสแกนบาร์โค้ด: ตั้งเป็น USB HID keyboard พร้อม Enter suffix
+
+---
+
+## 🚀 เริ่มต้นใช้งาน (จาก Source)
+
+> ต้องมี **Node.js 24+** และ **npm**
+
+### ทดลองใช้งาน (Demo Mode)
 
 ```powershell
 npm ci
@@ -13,11 +105,11 @@ npm run build
 npm run demo
 ```
 
-เปิด [ร้านทดลอง](http://127.0.0.1:3002) แล้วเข้าสู่ระบบด้วย `demo` / `demo-store-2026`
+เปิด [http://127.0.0.1:3002](http://127.0.0.1:3002) และเข้าสู่ระบบด้วย `demo` / `demo-store-2026`
 
-ร้านทดลองมีสินค้า 18 รายการ ใช้ `prisma/demo.db` แยกจากฐานข้อมูลร้านจริง พร้อมแถบแสดงโหมดทดลอง ห้ามใช้บัญชีทดลองสำหรับงานจริง ราคาสินค้าและบาร์โค้ดทั้งหมดในชุดตัวอย่างมีไว้ทดลองเท่านั้น
+> ร้านทดลองมีสินค้า 18 รายการ ใช้ฐานข้อมูลแยก (`prisma/demo.db`) ห้ามใช้สำหรับงานจริง
 
-## เริ่มร้านของคุณ
+### เริ่มร้านของคุณ
 
 ```powershell
 npm run setup
@@ -25,81 +117,55 @@ npm run build
 npm start
 ```
 
-เปิด [บ้านร้าน](http://127.0.0.1:3001) และสร้างบัญชีเจ้าของร้านในหน้าตั้งค่าครั้งแรก ฐานข้อมูลหลักเริ่มต้นว่าง ไม่มีบัญชีหรือรหัสผ่านสำเร็จรูป
+เปิด [http://127.0.0.1:3001](http://127.0.0.1:3001) และสร้างบัญชีเจ้าของร้านในหน้าตั้งค่าครั้งแรก
 
-หากต้องการพัฒนาต่อ ใช้ `npm run dev` และเปิด [หน้าพัฒนา](http://127.0.0.1:5173) ซึ่งเชื่อม API ที่พอร์ต 3001 อย่าเปิด `npm start` และ `npm run dev` พร้อมกัน เพราะใช้พอร์ต API เดียวกัน
-
-`npm run setup` สร้าง `.env` จาก `.env.example` เมื่อยังไม่มีไฟล์ สร้างไฟล์ SQLite ว่างก่อนรัน migration และสร้าง Prisma Client โดยไม่ล้างข้อมูลเดิม
-
-บน Windows ให้หยุด backend / โหมดทดลองก่อนรัน setup หรือ generate ใหม่ เพราะ Prisma native DLL จะถูกล็อกไว้ขณะโปรแกรมกำลังใช้งาน หากเพิ่งติดตั้ง Rust แล้ว terminal หา `cargo` ไม่เจอ ให้เปิด terminal ใหม่เพื่อรับ PATH ล่าสุด
-
-## สิ่งที่ทำได้
-
-- ขายด้วยการเลือกสินค้า หรือกรอก/สแกนบาร์โค้ดที่ลงท้ายด้วย Enter
-- ค้นหาจากชื่อ/บาร์โค้ด กรองหมวดหมู่ เพิ่ม/ลดจำนวน ลบรายการ และล้างบิล
-- ส่วนลดทั้งบิล รับเงินสด คำนวณเงินทอน และป้องกันเงินรับไม่พอ
-- ตัดสต็อก บันทึกบิล รายการขาย และ stock movement ใน transaction เดียว
-- เก็บเงินเป็นจำนวนเต็มหน่วยสตางค์ และเก็บราคา/ต้นทุน/ชื่อสินค้า ณ วันที่ขายไว้ในบิล
-- ป้องกันคำขอยืนยันขายซ้ำด้วย request ID; เก็บคำขอที่ยังไม่ทราบผลไว้เพื่อยืนยันบิลเดิมหลังเปิดแอปใหม่
-- ตะกร้าของแต่ละผู้ใช้คงอยู่เมื่อสลับหน้าและเปิดใหม่ใน browser profile เดิม
-- เพิ่ม/แก้ไข/นำสินค้าออกจากรายการขาย รับเข้า/ปรับสต็อกพร้อมผู้ทำรายการและเหตุผล
-- แจ้งเตือนเมื่อสต็อกเป็น 0 หรือต่ำกว่าจุดสั่งซื้อซ้ำ และหน้ารวมสินค้าใกล้หมด
-- ดู 100 บิลล่าสุด พิมพ์ใบเสร็จซ้ำ และคืนทั้งบิลโดยเจ้าของร้าน พร้อมคืนสต็อกและบันทึกเหตุผล
-- รายงานวัน/เดือน/ปีตามเวลา Asia/Bangkok กราฟแนวโน้ม สินค้าขายดี/ขายน้อย และส่งออก CSV
-- บัญชีเจ้าของร้าน/พนักงาน รหัสผ่านผ่าน scrypt, session cookie แบบ HttpOnly และจำกัดความถี่การลองรหัสผ่าน
-- สำรองฐานข้อมูลด้วย SQLite VACUUM INTO ขณะเปิดแอป; สำรองอัตโนมัติวันละครั้งเมื่อเปิดแอปและตรวจทุก 5 นาที
-
-## คีย์ลัดและอุปกรณ์
-
-- **F2** โฟกัสช่องค้นหา
-- **F4** เปิดรับชำระเงิน
-- **Enter** เพิ่มสินค้าตามบาร์โค้ดที่ตรงกัน
-- **Esc** ปิดหน้าต่าง ยกเว้นบิลที่ยังไม่ทราบผลบันทึก ซึ่งต้องตรวจผลบิลเดิมก่อน
-
-สแกนเนอร์ควรตั้งเป็น USB HID keyboard พร้อม Enter suffix ระบบตรวจช่วงเวลาระหว่างตัวอักษรเพื่อแยกการสแกน และตั้งช่วงกันสแกนซ้ำได้ในหน้าตั้งค่าร้าน ไม่แย่งโฟกัสขณะกรอกฟอร์มสินค้า/เงินสด
-
-ใบเสร็จพิมพ์ผ่าน print dialog และไดรเวอร์เครื่องพิมพ์ของ Windows ตั้งกระดาษ 80 มม., scale 100%, ปิด header/footer ของเบราว์เซอร์ รองรับฟอนต์ไทยที่มากับแอป ยังต้องทดสอบขอบกระดาษ การตัดกระดาษ และการพิมพ์ภาษาไทยกับเครื่องพิมพ์จริง ไม่ได้ส่ง ESC/POS raw หรือเปิดลิ้นชักเก็บเงินในรุ่นนี้
-
-## Desktop / Tauri
-
-ต้องมี Rust stable แบบ `x86_64-pc-windows-msvc`, Visual Studio C++ Build Tools และ WebView2
+### พัฒนาต่อ (Dev Mode)
 
 ```powershell
+npm run dev
+# เปิด http://127.0.0.1:5173
+```
+
+> ⚠️ อย่าเปิด `npm start` และ `npm run dev` พร้อมกัน เพราะใช้พอร์ต API เดียวกัน
+
+---
+
+## 🖥️ Desktop App (Tauri)
+
+> ต้องมี **Rust stable** (`x86_64-pc-windows-msvc`), **Visual Studio C++ Build Tools** และ **WebView2**
+
+```powershell
+# Development
 npm run setup
 npm run desktop:dev
-```
 
-สร้างตัวติดตั้ง:
-
-```powershell
+# สร้างตัวติดตั้ง
 npm run desktop:build
+# ผลลัพธ์: src-tauri/target/release/bundle/nsis/
 ```
 
-ผลลัพธ์อยู่ที่ `src-tauri/target/release/bundle/nsis/` ตัวแพ็กเกจรวม Node runtime, Express, Prisma native engine, frontend, ฟอนต์ และ migrations ไว้ด้วย ไม่รวมฐานข้อมูลร้านจริงหรือร้านทดลอง
+ตัว Desktop เปิด/ปิด backend อัตโนมัติพร้อมหน้าต่าง และตรวจ parent process เพื่อป้องกัน backend ค้างเมื่อปิดผิดปกติ
 
-ตัว Desktop เปิด/ปิด backend ในพื้นหลังพร้อมหน้าต่าง และตรวจ parent process เพื่อลดโอกาส backend ค้างเมื่อหน้าต่างถูกปิดผิดปกติ ถ้าพอร์ต 3001 มีโปรแกรมอื่นใช้อยู่ให้ปิดโปรแกรมนั้นก่อนเปิด Desktop
+---
 
-หลังติดตั้ง เก็บข้อมูลที่ `%LOCALAPPDATA%\com.baanran.pos\store.db` สำรองข้อมูลในโฟลเดอร์ `backups` ข้างกัน และบันทึกข้อผิดพลาดของ backend ใน `server.log` อัปเกรด schema ผ่าน migrations พร้อมตรวจ checksum
+## 💾 สำรองและกู้คืนข้อมูล
 
-ตัวติดตั้งยังไม่มี code signing ส่วน WebView2 จะดาวน์โหลดตอนติดตั้งเฉพาะเครื่องที่ยังไม่มี runtime; การใช้งานแอปหลังติดตั้งไม่ต้องใช้อินเทอร์เน็ต
+**สำรองข้อมูล:** ไปที่ **ตั้งค่าร้าน → สำรองข้อมูลตอนนี้**
+ระบบสำรองอัตโนมัติวันละครั้ง และตรวจทุก 5 นาทีเมื่อแอปเปิดอยู่
 
-## สำรองและกู้คืน
+**กู้คืนข้อมูล:**
 
-ไปที่ **ตั้งค่าร้าน → สำรองข้อมูลตอนนี้** ระบบจะแสดงพาธไฟล์ที่สร้าง และสถานะสำรองอัตโนมัติ ไฟล์สำรองครอบคลุมสินค้า บิล สต็อก และบัญชีผู้ใช้ จึงควรเก็บในที่ที่เจ้าของร้านเข้าถึงได้เท่านั้น
-
-สำหรับการรันจาก source ค่าเริ่มต้นคือฐานข้อมูล `prisma/store.db` และสำรองที่ `backups/`; เปลี่ยน `DATABASE_URL` และ `BACKUP_DIR` ผ่าน environment ได้ ตำแหน่ง SQLite แบบ relative อ้างอิงจากโฟลเดอร์ `prisma`
-
-กู้คืนด้วยขั้นตอนต่อไปนี้:
-
-1. ปิด Desktop หรือหยุด backend ทุก instance ให้สนิท
-2. เก็บสำเนาไฟล์ฐานข้อมูลเดิมและไฟล์ `-wal` / `-shm` ที่เกี่ยวข้องไว้ในโฟลเดอร์แยกก่อน
-3. นำไฟล์ฐานข้อมูลเดิมพร้อม `-wal` / `-shm` ออกจากตำแหน่งใช้งาน อย่านำ WAL เดิมมาใช้ร่วมกับฐานข้อมูลที่กู้คืน
-4. คัดลอกไฟล์สำรองที่ต้องการเป็น `store.db` ในตำแหน่งฐานข้อมูลของโหมดที่ใช้
+1. ปิด Desktop หรือหยุด backend ทุก instance
+2. เก็บสำเนา `store.db` เดิมและไฟล์ `-wal` / `-shm` ไว้ในโฟลเดอร์แยก
+3. นำ `store.db` เดิมพร้อม `-wal` / `-shm` ออกจากตำแหน่งใช้งาน
+4. คัดลอกไฟล์สำรองที่ต้องการเป็น `store.db` ในตำแหน่งฐานข้อมูล
 5. เปิดแอปใหม่ ตรวจสินค้าคงเหลือและบิลล่าสุดก่อนเริ่มขาย
 
-อย่าคัดลอกเฉพาะ `store.db` ขณะ backend ยังเปิดอยู่ เพราะรายการล่าสุดอาจอยู่ใน WAL ใช้ปุ่มสำรองเพื่อได้ snapshot ที่สมบูรณ์ เก็บสำเนาบางชุดไว้นอกเครื่อง; ระบบยังไม่ลบไฟล์สำรองเก่าอัตโนมัติ
+> ⚠️ อย่าคัดลอก `store.db` ขณะ backend ยังเปิดอยู่ — ใช้ปุ่มสำรองเพื่อ snapshot ที่สมบูรณ์
 
-## การทดสอบ
+---
+
+## 🧪 การทดสอบ
 
 ```powershell
 npm test
@@ -108,12 +174,310 @@ npm run desktop:prepare
 npm test
 ```
 
-ชุดทดสอบ API ใช้ SQLite ชั่วคราวใน `test-results-*` แยกจากข้อมูลร้าน ทดสอบ atomic checkout, retries, validation, สิทธิ์, คืนสินค้า, snapshot ราคาทุน, เขตเวลา, เดือนที่มีวันไม่เท่ากัน และ backup integrity
+ชุดทดสอบ API ใช้ SQLite ชั่วคราวใน `test-results-*` ทดสอบ: atomic checkout, retries, validation, สิทธิ์, คืนสินค้า, snapshot ราคาทุน, เขตเวลา และ backup integrity
 
-เมื่อมี desktop resources แล้ว จะทดสอบเปิด packaged Node runtime กับฐานข้อมูลใหม่ ปิด process แล้วเปิดซ้ำ และตรวจข้อมูลกับ migration history ด้วย ชุดทดสอบนี้ใช้พอร์ต 3003
+> **ผลการตรวจ 7 กันยายน 2026:** TypeScript/production build ✅ | Tests 11/11 ✅ | Rust/Tauri release ✅ | NSIS installer ✅ | Native executable เริ่ม bundled backend ได้จริง ✅
 
-ตรวจ executable ของ Tauri จริงหลัง build ได้ด้วย `./scripts/smoke-native.ps1` ขณะพอร์ต 3001 ว่าง สคริปต์จะเปิดแอปแบบซ่อนหน้าต่าง ตรวจ backend แล้วหยุด process ที่ใช้ทดสอบ (สร้างฐานข้อมูลว่างใน AppData ถ้ายังไม่มี)
+---
 
-ผลการตรวจวันที่ 7 กันยายน 2026: TypeScript/production build ผ่าน, tests ผ่าน 11/11, Rust/Tauri release และ NSIS installer build ผ่าน และ native executable เริ่ม bundled backend ได้จริง โดยฐานข้อมูลร้านจริงยังพร้อมตั้งค่าครั้งแรก ไม่ได้ทดสอบการติดตั้ง/ถอนติดตั้งผ่าน wizard หรืออุปกรณ์จริง
+## 📁 โครงสร้างโปรเจกต์
+
+```
+Store-app/
+├── src/                    # Frontend (React + TypeScript)
+│   ├── main.tsx            # Entry point ของ React
+│   ├── App.tsx             # Root component, routing, auth state
+│   ├── POS.tsx             # หน้าขายหน้าร้าน (Point of Sale)
+│   ├── Inventory.tsx       # หน้าจัดการคลังสินค้า + แจ้งเตือนสินค้าใกล้หมด
+│   ├── Management.tsx      # Reports, SalesHistory, SettingsPage
+│   ├── components.tsx      # Shared UI components (Modal ฯลฯ)
+│   ├── types.ts            # TypeScript types + utility functions
+│   └── styles.css          # Global CSS styles
+│
+├── server/                 # Backend (Express + TypeScript)
+│   ├── index.ts            # Entry point: HTTP server, static files, lifecycle
+│   ├── app.ts              # Express app: ทุก API routes
+│   ├── db.ts                # Prisma Client instance
+│   ├── security.ts         # Password hashing (scrypt)
+│   ├── backup.ts           # Backup อัตโนมัติรายวัน + manual backup
+│   └── demo.ts              # ข้อมูลสินค้าตัวอย่างสำหรับ demo
+│
+├── prisma/                 # Database schema & migrations
+│   ├── schema.prisma       # Prisma schema (SQLite)
+│   └── migrations/         # Migration files
+│
+├── src-tauri/              # Tauri Desktop App (Rust)
+│   ├── tauri.conf.json     # Tauri configuration
+│   ├── Cargo.toml          # Rust dependencies
+│   ├── src/                # Rust source
+│   ├── capabilities/       # Tauri permission capabilities
+│   ├── icons/              # App icons
+│   └── resources/          # Bundled resources (server binary)
+│
+├── scripts/                # Build & setup scripts (Node.js)
+│   ├── setup.mjs            # Initial project setup
+│   ├── ensure-db.mjs        # ตรวจสอบ/สร้าง database ก่อน migrate
+│   ├── prepare-desktop.mjs # เตรียม binary สำหรับ Tauri build
+│   ├── demo.mjs              # รัน demo mode
+│   └── smoke-native.ps1    # PowerShell smoke test สำหรับ native build
+│
+├── tests/                  # Automated Tests
+│   ├── api.test.ts         # Integration tests สำหรับทุก API endpoints
+│   └── desktop.test.ts     # Tests สำหรับ Tauri desktop app
+│
+├── backups/                # ไฟล์ backup database (auto-generated)
+├── dist/                   # Frontend build output (auto-generated)
+├── dist-server/            # Server build output (auto-generated)
+├── public/                 # Static assets
+│
+├── index.html              # HTML entry point (Vite)
+├── vite.config.ts          # Vite configuration
+├── tsconfig.json           # TypeScript config (frontend)
+├── tsconfig.server.json    # TypeScript config (server)
+├── package.json            # npm scripts & dependencies
+├── .env                     # Environment variables (ไม่ commit)
+└── .env.example             # ตัวอย่าง environment variables
+```
+
+---
+
+## 🏗️ Architecture Overview
+
+```
+┌─────────────────────────────────────────────────┐
+│                  Client (Browser)               │
+│  React 19 + TypeScript                          │
+│  ┌──────────┬───────────┬──────────────────┐   │
+│  │  POS.tsx │Inventory  │  Management.tsx   │   │
+│  │ (ขายหน้า │ .tsx      │ (Reports/Sales/  │   │
+│  │  ร้าน)   │(คลังสินค้า)│  Settings)       │   │
+│  └──────────┴───────────┴──────────────────┘   │
+│              App.tsx (Root + Auth)              │
+└─────────────────────┬───────────────────────────┘
+                      │ HTTP /api/*
+┌─────────────────────▼───────────────────────────┐
+│              Express Server (Node.js)            │
+│  server/app.ts — REST API routes                │
+│  server/security.ts — Auth (scrypt)             │
+│  server/backup.ts — Daily auto backup           │
+└─────────────────────┬───────────────────────────┘
+                      │ Prisma ORM
+┌─────────────────────▼───────────────────────────┐
+│              SQLite Database                     │
+│  prisma/store.db (ข้อมูลร้านจริง)               │
+│  prisma/demo.db  (ข้อมูล demo)                  │
+└─────────────────────────────────────────────────┘
+```
+
+**Desktop Mode (Tauri):** Express server ถูก bundle เป็น binary ไว้ใน `src-tauri/resources/` และถูกเรียกใช้จาก Rust เมื่อเปิดแอป
+
+---
+
+## 🗄️ Database Schema
+
+### `User` — ผู้ใช้งาน
+
+| Field          | Type            | Description                    |
+| -------------- | --------------- | ------------------------------ |
+| `id`           | String (cuid)   | Primary key                    |
+| `name`         | String          | ชื่อแสดงผล                     |
+| `username`     | String (unique) | ชื่อผู้ใช้ login               |
+| `passwordHash` | String          | รหัสผ่านที่ผ่าน scrypt hashing |
+| `role`         | String          | `"owner"` หรือ `"cashier"`     |
+
+### `Product` — สินค้า
+
+| Field              | Type            | Description                         |
+| ------------------ | --------------- | ----------------------------------- |
+| `id`               | String (cuid)   | Primary key                         |
+| `name`             | String          | ชื่อสินค้า                          |
+| `barcode`          | String (unique) | บาร์โค้ด                            |
+| `category`         | String          | หมวดหมู่สินค้า                      |
+| `costPrice`        | Int             | ราคาทุน (หน่วย: สตางค์)             |
+| `sellPrice`        | Int             | ราคาขาย (หน่วย: สตางค์)             |
+| `unit`             | String          | หน่วยนับ (ชิ้น, ขวด, ฯลฯ)           |
+| `stockQty`         | Int             | จำนวนสต็อกคงเหลือ                   |
+| `reorderThreshold` | Int             | จุดสั่งซื้อ (แจ้งเตือนเมื่อต่ำกว่า) |
+| `icon`             | String          | Emoji icon (default: 📦)            |
+| `active`           | Boolean         | Soft delete flag                    |
+
+### `Sale` — บิลการขาย
+
+| Field             | Type            | Description                    |
+| ----------------- | --------------- | ------------------------------ |
+| `id`              | String (cuid)   | Primary key                    |
+| `requestId`       | String (unique) | UUID สำหรับ idempotent request |
+| `totalAmount`     | Int             | ยอดรวมสุทธิ (หน่วย: สตางค์)    |
+| `discount`        | Int             | ส่วนลด                         |
+| `paymentReceived` | Int             | เงินที่รับมา                   |
+| `change`          | Int             | เงินทอน                        |
+| `cashier`         | String          | ชื่อพนักงาน                    |
+| `createdAt`       | DateTime        | วันเวลาขาย                     |
+| `returnedAt`      | DateTime?       | วันที่คืนสินค้า                |
+| `returnReason`    | String?         | เหตุผลการคืน                   |
+| `returnedBy`      | String?         | ชื่อผู้อนุมัติคืน              |
+
+### `SaleItem` — รายการสินค้าในบิล
+
+| Field       | Type   | Description                     |
+| ----------- | ------ | ------------------------------- |
+| `saleId`    | String | FK → Sale                       |
+| `productId` | String | FK → Product                    |
+| `name`      | String | ชื่อสินค้า ณ เวลาขาย (snapshot) |
+| `quantity`  | Int    | จำนวนที่ขาย                     |
+| `unitPrice` | Int    | ราคาต่อหน่วย ณ เวลาขาย          |
+| `costPrice` | Int    | ราคาทุน ณ เวลาขาย               |
+| `subtotal`  | Int    | ยอดรวมรายการนี้                 |
+
+> **หมายเหตุ:** ราคาทุกตัวเก็บเป็น **สตางค์** (integer) เพื่อหลีกเลี่ยงปัญหา floating-point เช่น ราคา 25.50 บาท = `2550`
+
+---
+
+## 🌐 API Endpoints
+
+Base URL: `http://127.0.0.1:3001/api`
+
+### Authentication
+
+| Method | Endpoint   | Auth | Description                        |
+| ------ | ---------- | ---- | ---------------------------------- |
+| GET    | `/session` | —    | ดึงข้อมูล session ปัจจุบัน         |
+| POST   | `/setup`   | —    | ตั้งค่าร้านครั้งแรก (สร้าง owner)  |
+| POST   | `/login`   | —    | เข้าสู่ระบบ (cookie-based session) |
+| POST   | `/logout`  | ✅   | ออกจากระบบ                         |
+| GET    | `/health`  | —    | Health check                       |
+
+### Products
+
+| Method | Endpoint            | Auth  | Description                       |
+| ------ | ------------------- | ----- | --------------------------------- |
+| GET    | `/products`         | ✅    | ดูสินค้าทั้งหมด (active เท่านั้น) |
+| POST   | `/products`         | owner | เพิ่มสินค้าใหม่                   |
+| PUT    | `/products/:id`     | owner | แก้ไขข้อมูลสินค้า                 |
+| DELETE | `/products/:id`     | owner | ซ่อนสินค้า (soft delete)          |
+| GET    | `/alerts/low-stock` | ✅    | สินค้าที่ stock ต่ำกว่า threshold |
+
+### Stock Movements
+
+| Method | Endpoint           | Auth  | Description                                   |
+| ------ | ------------------ | ----- | --------------------------------------------- |
+| GET    | `/stock-movements` | owner | ดู log ความเคลื่อนไหวสต็อก (200 รายการล่าสุด) |
+| POST   | `/stock-movements` | owner | รับสินค้าเข้า / ปรับสต็อก                     |
+
+### Sales
+
+| Method | Endpoint            | Auth  | Description                              |
+| ------ | ------------------- | ----- | ---------------------------------------- |
+| GET    | `/sales`            | ✅    | ดูประวัติการขาย (100 รายการล่าสุด)       |
+| POST   | `/sales`            | ✅    | บันทึกการขาย (idempotent ด้วย requestId) |
+| POST   | `/sales/:id/return` | owner | คืนสินค้าทั้งบิล                         |
+
+### Reports & Backup
+
+| Method | Endpoint          | Auth  | Description                               |
+| ------ | ----------------- | ----- | ----------------------------------------- |
+| GET    | `/reports`        | owner | รายงานยอดขาย + กราฟ + top/bottom products |
+| GET    | `/reports/export` | owner | Export CSV                                |
+| POST   | `/backup`         | owner | สร้าง backup ทันที                        |
+| GET    | `/backup/status`  | owner | สถานะ auto backup ล่าสุด                  |
+
+---
+
+## ⚙️ Environment Variables
+
+สร้างจาก `.env.example`:
+
+| Variable         | Default           | Description                               |
+| ---------------- | ----------------- | ----------------------------------------- |
+| `DATABASE_URL`   | `file:./store.db` | Path ไปยัง SQLite database                |
+| `PORT`           | `3001`            | Port ของ Express server                   |
+| `BACKUP_DIR`     | `backups/`        | Directory สำหรับเก็บ backup files         |
+| `POS_DEMO`       | —                 | ตั้งเป็น `"1"` เพื่อใช้ demo database     |
+| `POS_PARENT_PID` | —                 | PID ของ parent process (ใช้ใน Tauri mode) |
+
+---
+
+## 📜 npm Scripts
+
+```bash
+npm run dev              # รัน development: server + vite พร้อมกัน
+npm run build            # Build production: TypeCheck + Vite + tsc server
+npm run start            # รัน production server (ต้อง build ก่อน)
+npm run setup            # Initial setup
+npm run db:generate      # Generate Prisma client
+npm run db:migrate       # Apply database migrations
+npm test                 # รัน integration tests
+npm run demo             # รัน demo mode
+npm run desktop:dev      # Tauri development mode
+npm run desktop:prepare  # Build + prepare สำหรับ Tauri
+npm run desktop:build    # Build Tauri desktop app (.exe + installer)
+```
+
+---
+
+## 📦 Dependencies หลัก
+
+### Production
+
+| Package                      | Version  | Purpose             |
+| ---------------------------- | -------- | ------------------- |
+| `react` + `react-dom`        | ^19.1.0  | UI framework        |
+| `express`                    | ^5.1.0   | HTTP server         |
+| `@prisma/client`             | 6.19.0   | Database ORM        |
+| `zod`                        | ^3.25.0  | Request validation  |
+| `recharts`                   | ^3.1.0   | Charts สำหรับรายงาน |
+| `lucide-react`               | ^0.468.0 | Icon library        |
+| `@fontsource/noto-sans-thai` | ^5.2.5   | Thai font           |
+
+### Development
+
+| Package           | Version | Purpose                      |
+| ----------------- | ------- | ---------------------------- |
+| `vite`            | ^6.3.0  | Frontend bundler             |
+| `typescript`      | ^5.9.0  | Type checking                |
+| `tsx`             | ^4.20.0 | Run TypeScript (server dev)  |
+| `prisma`          | 6.19.0  | Database schema & migrations |
+| `@tauri-apps/cli` | ^2.11.4 | Desktop app build tool       |
+| `supertest`       | ^7.1.4  | HTTP integration testing     |
+
+---
+
+## 🔐 Security
+
+| ด้าน                 | วิธีการ                                                          |
+| -------------------- | ---------------------------------------------------------------- |
+| **Session**          | Cookie-based (`httpOnly`, `sameSite: strict`), อายุ 12 ชั่วโมง   |
+| **Password**         | `scrypt` hashing (salt + 64-byte digest) ไม่มี dependency ภายนอก |
+| **Rate Limiting**    | Login จำกัด 10 ครั้ง/นาที ต่อ IP                                 |
+| **CORS**             | เปิดให้เฉพาะ `127.0.0.1` / `localhost` เท่านั้น                  |
+| **CSP Headers**      | Content-Security-Policy แบบ strict                               |
+| **Idempotent Sales** | ใช้ `requestId` (UUID) ป้องกันการบันทึกซ้ำ                       |
+| **Role Guard**       | `owner` middleware ป้องกัน endpoint ที่ต้องการสิทธิ์สูง          |
+
+---
+
+## 📐 Data Flow — การขายสินค้า
+
+```
+User คลิกสินค้า / สแกนบาร์โค้ด
+        ↓
+POS.tsx — เพิ่มลงตะกร้า CartItem[]
+        ↓
+กด "รับชำระเงิน" (F4)
+        ↓
+POST /api/sales { requestId, items, discount, paymentReceived }
+        ↓
+Server: ตรวจสอบราคา + สต็อก (ใน Transaction)
+        ↓
+สร้าง Sale + SaleItem + StockMovement (type: 'out')
+        ↓
+ลด stockQty ของแต่ละ Product
+        ↓
+Response → แสดง receipt + ล้างตะกร้า
+```
+
+---
 
 รายละเอียดขอบเขต ข้อเสนอ และงานที่ต้องลองกับฮาร์ดแวร์อยู่ใน [SUGGESTIONS.md](SUGGESTIONS.md)
+
+_อัปเดตล่าสุด: กันยายน 2026_
