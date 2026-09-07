@@ -1,0 +1,1 @@
+{"identifier":"default","description":"Local POS window with no filesystem or shell commands exposed to web content","windows":["main"],"permissions":["core:default"]}

@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "sqlite"
+  url = env("DATABASE_URL")
+}
+model User {
+  id String @id @default(cuid())
+  name String
+  username String @unique
+  passwordHash String
+  role String @default("cashier")
+}
+model Product {
+  id String @id @default(cuid())
+  name String
+  barcode String @unique
+  category String
+  costPrice Int
+  sellPrice Int
+  unit String
+  stockQty Int @default(0)
+  reorderThreshold Int @default(5)
+  icon String @default("📦")
+  active Boolean @default(true)
+  movements StockMovement[]
+  items SaleItem[]
+}
+model StockMovement {
+  id String @id @default(cuid())
+  productId String
+  product Product @relation(fields: [productId], references: [id])
+  type String
+  quantity Int
+  note String
+  actor String
+  createdAt DateTime @default(now())
+}
+model Sale {
+  id String @id @default(cuid())
+  requestId String @unique
+  totalAmount Int
+  discount Int @default(0)
+  paymentReceived Int
+  change Int
+  cashier String
+  createdAt DateTime @default(now())
+  returnedAt DateTime?
+  returnReason String?
+  returnedBy String?
+  items SaleItem[]
+}
+model SaleItem {
+  id String @id @default(cuid())
+  saleId String
+  sale Sale @relation(fields: [saleId], references: [id])
+  productId String
+  product Product @relation(fields: [productId], references: [id])
+  name String
+  barcode String
+  quantity Int
+  unitPrice Int
+  costPrice Int
+  subtotal Int
+}

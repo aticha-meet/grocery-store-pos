@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-server/
+
+# Database (SQLite)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Environment variables
+.env
+*.env
+*.env.local
+
+# Tauri / Rust build artifacts
+src-tauri/target/
+src-tauri/resources/
+
+# Testing
+test-results/
+test-results-*/
+
+# Backups
+backups/
+
+# Tooling / misc
+.tooling/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
