@@ -1,0 +1,9 @@
+ALTER TABLE "Sale" ADD COLUMN "paymentMethod" TEXT NOT NULL DEFAULT 'cash';
+ALTER TABLE "Sale" ADD COLUMN "governmentRateBps" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "Sale" ADD COLUMN "governmentAmount" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "Sale" ADD COLUMN "customerAmount" INTEGER NOT NULL DEFAULT 0;
+UPDATE "Sale" SET "customerAmount" = "totalAmount";
+CREATE TABLE "PaymentSettings" (
+  "id" TEXT NOT NULL PRIMARY KEY DEFAULT 'main',
+  "governmentRateBps" INTEGER NOT NULL DEFAULT 5000
+);

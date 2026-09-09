@@ -44,12 +44,20 @@ model Sale {
   discount Int @default(0)
   paymentReceived Int
   change Int
+  paymentMethod String @default("cash")
+  governmentRateBps Int @default(0)
+  governmentAmount Int @default(0)
+  customerAmount Int @default(0)
   cashier String
   createdAt DateTime @default(now())
   returnedAt DateTime?
   returnReason String?
   returnedBy String?
   items SaleItem[]
+}
+model PaymentSettings {
+  id String @id @default("main")
+  governmentRateBps Int @default(5000)
 }
 model SaleItem {
   id String @id @default(cuid())

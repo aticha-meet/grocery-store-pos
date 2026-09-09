@@ -102,13 +102,14 @@ function ReceiptBody({ sale }: { sale: Sale }) {
         <b>{baht(sale.totalAmount)}</b>
       </div>
       <div className="spread">
-        <span>รับเงิน</span>
+        <span>รับจากลูกค้า</span>
         <span>{baht(sale.paymentReceived)}</span>
       </div>
       <div className="spread">
         <span>เงินทอน</span>
         <span>{baht(sale.change)}</span>
       </div>
+      {sale.paymentMethod === 'thai_help_thai' && <><hr/><p><b>ไทยช่วยไทย</b></p><div className="spread"><span>รัฐจ่าย {sale.governmentRateBps / 100}%</span><b>{baht(sale.governmentAmount)}</b></div><div className="spread"><span>ลูกค้าจ่าย {(10000 - sale.governmentRateBps) / 100}%</span><b>{baht(sale.customerAmount)}</b></div></>}
       {sale.returnedAt && <p>คืนทั้งบิลแล้ว: {sale.returnReason}</p>}
       <hr />
       <p>

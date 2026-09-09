@@ -250,6 +250,7 @@ export default function App() {
         <main>
           <section hidden={page !== "pos"}>
             <POS
+              owner={user.role === "owner"}
               active={page === "pos"}
               storageKey={`cart-${user.id}`}
               products={products}

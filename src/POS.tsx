@@ -1,3 +1,4 @@
+import { Checkout } from './Checkout';
 import { useEffect, useRef, useState } from "react";
 import {
   Search,
@@ -24,6 +25,7 @@ import {
 } from "./types";
 import { Empty, Modal, SaleComplete } from "./components";
 type Props = {
+  owner: boolean;
   active: boolean;
   storageKey: string;
   products: Product[];
@@ -54,7 +56,7 @@ export function POS({
   onAlerts,
   active,
   storageKey,
-}: Props) {
+ owner, }: Props) {
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) ?? "[]");
@@ -218,6 +220,7 @@ export function POS({
         .filter((i) => i.quantity > 0),
     );
   }
+  if (pay) return <Checkout cart={cart} storageKey={storageKey} owner={owner} onClose={() => setPay(false)} onSuccess={async result => { setSale(result); setPay(false); setCart([]); await refresh(); }} notify={notify}/>;
   return (
     <div className="pos-layout">
       <section className="catalog">
@@ -370,7 +373,7 @@ export function POS({
             <span className="online-dot" />
             บันทึกลงเครื่อง · ใช้งานได้โดยไม่ต้องต่ออินเทอร์เน็ต
           </span>
-          <span>บ้านร้าน v0.1</span>
+          <span>บ้านร้าน v0.2</span>
         </footer>
       </section>
       <aside className="cart-panel">
@@ -477,7 +480,7 @@ export function POS({
           </button>
           <div className="payment-note">
             <ShieldIcon />
-            รับเงินสด · คำนวณเงินทอนอัตโนมัติ
+            เงินสด / ไทยช่วยไทย · คำนวณเงินทอนอัตโนมัติ
           </div>
         </div>
       </aside>
@@ -506,20 +509,6 @@ export function POS({
           </div>
         </Modal>
       )}
-      {pay && (
-        <Payment
-          storageKey={storageKey}
-          cart={cart}
-          onClose={() => setPay(false)}
-          onSuccess={async (sale) => {
-            setSale(sale);
-            setPay(false);
-            setCart([]);
-            await refresh();
-          }}
-          notify={notify}
-        />
-      )}{" "}
       {sale && <SaleComplete sale={sale} onClose={() => setSale(null)} />}
     </div>
   );
@@ -529,182 +518,4 @@ function ReceiptIcon() {
 }
 function ShieldIcon() {
   return <Check size={16} />;
-}
-function Payment({
-  storageKey,
-  cart,
-  onClose,
-  onSuccess,
-  notify,
-}: {
-  storageKey: string;
-  cart: CartItem[];
-  onClose: () => void;
-  onSuccess: (s: Sale) => void;
-  notify: Props["notify"];
-}) {
-  const subtotal = cart.reduce(
-    (s, i) => s + i.product.sellPrice * i.quantity,
-    0,
-  );
-  type Pending = {
-    requestId: string;
-    items: { productId: string; quantity: number; unitPrice: number }[];
-    discount: number;
-    paymentReceived: number;
-  };
-  const [pending] = useState<Pending | null>(() => {
-    try {
-      return JSON.parse(
-        localStorage.getItem(storageKey + "-pending") ?? "null",
-      );
-    } catch {
-      return null;
-    }
-  });
-  const [discount, setDiscount] = useState(
-    String((pending?.discount ?? 0) / 100),
-  );
-  const [received, setReceived] = useState(
-    pending ? String(pending.paymentReceived / 100) : "",
-  );
-  const [busy, setBusy] = useState(false);
-  const [locked, setLocked] = useState(Boolean(pending));
-  const sending = useRef(false);
-  const requestId = useRef(pending?.requestId ?? crypto.randomUUID());
-  const payload = useRef<Pending | null>(pending);
-  const discountCents = Math.round(Number(discount) * 100);
-  const amount = subtotal - discountCents;
-  const receivedCents = Math.round(Number(received) * 100);
-  const valid =
-    Number.isFinite(amount) &&
-    amount >= 0 &&
-    discountCents >= 0 &&
-    receivedCents >= amount &&
-    received !== "";
-  async function confirm(e: React.FormEvent) {
-    e.preventDefault();
-    if (!valid || sending.current) return;
-    sending.current = true;
-    setBusy(true);
-    setLocked(true);
-    payload.current ??= {
-      requestId: requestId.current,
-      items: cart.map((i) => ({
-        productId: i.product.id,
-        quantity: i.quantity,
-        unitPrice: i.product.sellPrice,
-      })),
-      discount: discountCents,
-      paymentReceived: receivedCents,
-    };
-    try {
-      localStorage.setItem(
-        storageKey + "-pending",
-        JSON.stringify(payload.current),
-      );
-      const result = await post<Sale>("/sales", payload.current);
-      localStorage.setItem(storageKey, "[]");
-      localStorage.removeItem(storageKey + "-pending");
-      onSuccess(result);
-    } catch (e) {
-      const status = (e as Error & { status?: number }).status;
-      if (status && status >= 400 && status < 500 && status !== 401) {
-        localStorage.removeItem(storageKey + "-pending");
-        payload.current = null;
-        setLocked(false);
-      }
-      notify((e as Error).message, true);
-    } finally {
-      setBusy(false);
-      sending.current = false;
-    }
-  }
-  return (
-    <Modal
-      title="รับชำระเงินสด"
-      onClose={() => {
-        if (!busy && !locked) onClose();
-        else if (!busy)
-          notify(
-            "กรุณายืนยันบิลเดิมอีกครั้งเพื่อตรวจผลการบันทึก ก่อนเริ่มบิลใหม่",
-            true,
-          );
-      }}
-    >
-      <form onSubmit={confirm}>
-        <div className="payment-amount">
-          <span>ยอดที่ต้องชำระ</span>
-          <strong>{baht(Math.max(0, amount))}</strong>
-          <small>
-            สินค้ารวม {cart.reduce((n, i) => n + i.quantity, 0)} ชิ้น
-          </small>
-        </div>
-        <label>
-          ส่วนลดทั้งบิล (บาท)
-          <input
-            type="number"
-            min="0"
-            max={subtotal / 100}
-            step="0.01"
-            value={discount}
-            disabled={locked}
-            onChange={(e) => setDiscount(e.target.value)}
-          />
-        </label>
-        <label>
-          รับเงินมา (บาท)
-          <input
-            className="cash-input"
-            data-autofocus
-            autoFocus
-            type="number"
-            min="0"
-            step="0.01"
-            required
-            value={received}
-            disabled={locked}
-            onChange={(e) => setReceived(e.target.value)}
-            placeholder="0.00"
-          />
-        </label>
-        <div className="cash-presets">
-          {[...new Set([Math.max(0, amount), 10000, 50000, 100000])]
-            .filter((v) => v >= amount)
-            .map((v, index) => (
-              <button
-                type="button"
-                disabled={locked}
-                key={v}
-                onClick={() => setReceived(String(v / 100))}
-              >
-                {index === 0 ? "พอดี" : money(v)}
-              </button>
-            ))}
-        </div>
-        <div
-          className={`change-box ${receivedCents >= amount ? "" : "insufficient"}`}
-        >
-          <span>
-            {received && receivedCents < amount ? "ยังขาดอีก" : "เงินทอน"}
-          </span>
-          <strong>
-            {baht(received ? Math.abs(receivedCents - amount) : 0)}
-          </strong>
-        </div>
-        {locked && !busy && (
-          <p className="muted">
-            หากการเชื่อมต่อขัดข้อง กด “ยืนยันการขาย” อีกครั้ง
-            ระบบใช้รหัสบิลเดิมเพื่อป้องกันบิลซ้ำ
-            กรุณาตรวจผลบิลเดิมก่อนเริ่มบิลใหม่ แม้ปิดแอปแล้วเปิดใหม่
-            ระบบจะกลับมาที่บิลนี้
-          </p>
-        )}
-        <button className="button primary large full" disabled={!valid || busy}>
-          {busy ? "กำลังบันทึก…" : "ยืนยันการขาย"}
-          <Check size={24} />
-        </button>
-      </form>
-    </Modal>
-  );
 }

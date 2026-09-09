@@ -150,6 +150,7 @@ export function Reports({ notify }: { notify: Notify }) {
                 <small>อ้างอิงวันที่ขายเดิม</small>
               </div>
             </div>
+            <section className="table-panel"><div className="panel-title"><div><h2>แยกยอดผู้ชำระ</h2><p>รวมเงินสดและส่วนที่ลูกค้าชำระในโครงการ · หักบิลคืนแล้ว</p></div></div><div className="ranking-row"><b>ลูกค้าชำระ</b><strong>{baht(report.customerTotal)}</strong></div><div className="ranking-row"><b>รัฐช่วยจ่าย (ไทยช่วยไทย)</b><strong>{baht(report.governmentTotal)}</strong></div></section>
             <section className="chart-panel">
               <div className="panel-title">
                 <div>
@@ -350,6 +351,7 @@ export function SalesHistory({
                     >
                       {s.returnedAt ? "คืนแล้ว" : "สำเร็จ"}
                     </span>
+                    <small className="block muted">{s.paymentMethod === 'thai_help_thai' ? `ไทยช่วยไทย · รัฐ ${s.governmentRateBps / 100}%` : 'เงินสด'}</small>
                   </td>
                   <td>
                     <button
@@ -398,7 +400,7 @@ export function SalesHistory({
                     reason: f.get("reason"),
                   });
                   notify(
-                    `คืนสินค้าแล้ว — คืนเงินสดให้ลูกค้า ${baht(selected.totalAmount)}`,
+                    `คืนสินค้าแล้ว — คืนเงินให้ลูกค้า ${baht(selected.customerAmount)}${selected.governmentAmount > 0 ? ' และดำเนินการยกเลิกยอดรัฐในระบบโครงการ' : ''}`,
                   );
                   setSelected(null);
                   await Promise.all([load(), refresh()]);
@@ -414,8 +416,9 @@ export function SalesHistory({
               </p>
               <div className="change-box">
                 <span>เงินที่ต้องคืนให้ลูกค้า</span>
-                <strong>{baht(selected.totalAmount)}</strong>
+                <strong>{baht(selected.customerAmount)}</strong>
               </div>
+              {selected.governmentAmount > 0 && <p className="inline-error">ยอดรัฐ {baht(selected.governmentAmount)} ต้องดำเนินการยกเลิก/คืนผ่านระบบโครงการแยกต่างหาก ไม่จ่ายยอดส่วนนี้เป็นเงินสดให้ลูกค้า</p>}
               <label>
                 เหตุผลการคืน
                 <input

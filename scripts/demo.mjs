@@ -7,6 +7,9 @@ if (!existsSync(path)) {
   sqlite.exec(readFileSync('prisma/migrations/20260907042930_init/migration.sql', 'utf8'));
   sqlite.close();
 }
+const migrationDb = new DatabaseSync(path);
+if (!migrationDb.prepare('PRAGMA table_info(Sale)').all().some(c => c.name === 'paymentMethod')) migrationDb.exec(readFileSync('prisma/migrations/20260909000100_payment_assistance/migration.sql','utf8'));
+migrationDb.close();
 process.env.DATABASE_URL = 'file:' + path.replaceAll('\\', '/');
 process.env.PORT = '3002';
 process.env.POS_DEMO = '1';

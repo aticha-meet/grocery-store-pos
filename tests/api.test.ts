@@ -2,7 +2,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import request from 'supertest';
 // Each run gets its own database. Never reset or mutate a store database.
@@ -10,7 +10,7 @@ const dir = mkdtempSync(resolve('test-results-'));
 process.env.DATABASE_URL = 'file:' + join(dir, 'test.db').replaceAll('\\', '/');
 process.env.BACKUP_DIR = join(dir, 'backups');
 const sqlite = new DatabaseSync(join(dir, 'test.db'));
-sqlite.exec(readFileSync('prisma/migrations/20260907042930_init/migration.sql', 'utf8')); sqlite.close();
+for (const m of readdirSync('prisma/migrations', {withFileTypes:true}).filter(m=>m.isDirectory()).sort((a,b)=>a.name.localeCompare(b.name))) sqlite.exec(readFileSync('prisma/migrations/'+m.name+'/migration.sql','utf8')); sqlite.close();
 const { app, report } = await import('../server/app.js');
 const { db } = await import('../server/db.js');
 const owner = request.agent(app); const cashier = request.agent(app);

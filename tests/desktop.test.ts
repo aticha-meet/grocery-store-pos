@@ -39,6 +39,6 @@ test('packaged Node backend migrates a clean database and retains data after abr
     assert.equal(sqlite.prepare('SELECT count(*) AS count FROM Product').get()?.count, 18);
     assert.equal(sqlite.prepare('SELECT count(*) AS count FROM Sale').get()?.count, 1);
     assert.equal(sqlite.prepare('SELECT stockQty FROM Product WHERE id = ?').get(product.id)?.stockQty, product.stockQty - 1);
-    assert.equal(sqlite.prepare('SELECT count(*) AS count FROM _prisma_migrations').get()?.count, 1); sqlite.close();
+    assert.equal(sqlite.prepare('SELECT count(*) AS count FROM _prisma_migrations').get()?.count, 2); sqlite.close();
   } finally { await stop(); }
 });

@@ -84,8 +84,13 @@ app.post('/api/stock-movements', owner, async (req, res) => {
     return tx.stockMovement.create({ data: { ...data, actor: res.locals.user.name } });
   }); res.status(201).json(result);
 });
+app.get('/api/payment-settings', async (_req, res) => res.json(await db.paymentSettings.findUnique({ where: { id: 'main' } }) ?? { id: 'main', governmentRateBps: 5000 }));
+app.put('/api/payment-settings', owner, async (req, res) => {
+  const data = z.object({ governmentRateBps: z.number().int().min(0).max(10000) }).parse(req.body);
+  res.json(await db.paymentSettings.upsert({ where: { id: 'main' }, create: { id: 'main', ...data }, update: data }));
+});
 app.post('/api/sales', async (req, res) => {
-  const data = z.object({ requestId: z.string().uuid(), items: z.array(z.object({ productId: z.string(), quantity: quantity.refine(v => v > 0), unitPrice: cents })).min(1).max(200), discount: cents.default(0), paymentReceived: cents }).parse(req.body);
+  const data = z.object({ requestId: z.string().uuid(), items: z.array(z.object({ productId: z.string(), quantity: quantity.refine(v => v > 0), unitPrice: cents })).min(1).max(200), discount: cents.default(0), paymentReceived: cents, paymentMethod: z.enum(['cash', 'thai_help_thai']).default('cash'), governmentRateBps: z.number().int().min(0).max(10000).optional(), assistanceConfirmed: z.boolean().default(false) }).parse(req.body);
   if (new Set(data.items.map(i => i.productId)).size !== data.items.length) fail('รายการสินค้าซ้ำกัน');
   const result = await db.$transaction(async tx => {
     const existing = await tx.sale.findUnique({ where: { requestId: data.requestId }, include: { items: true } });
@@ -105,8 +110,16 @@ app.post('/api/sales', async (req, res) => {
     }
     const total = subtotal - data.discount;
     if (total < 0 || total > 100_000_000) fail('ยอดรวม/ส่วนลดอยู่นอกช่วงที่รองรับ');
-    if (data.paymentReceived < total) fail('จำนวนเงินที่รับมาไม่เพียงพอ');
-    const sale = await tx.sale.create({ data: { requestId: data.requestId, totalAmount: total, discount: data.discount, paymentReceived: data.paymentReceived, change: data.paymentReceived - total, cashier: res.locals.user.name, items: { create: items } }, include: { items: true } });
+    let governmentRateBps = 0;
+    if (data.paymentMethod === 'thai_help_thai') {
+      if (!data.assistanceConfirmed) fail('กรุณาตรวจสอบการชำระผ่านโครงการและยืนยันก่อนบันทึก');
+      governmentRateBps = (await tx.paymentSettings.findUnique({ where: { id: 'main' } }))?.governmentRateBps ?? 5000;
+      if (data.governmentRateBps !== governmentRateBps) fail('สัดส่วนช่วยจ่ายเปลี่ยนแล้ว กรุณาโหลดสัดส่วนล่าสุดก่อนยืนยัน', 409);
+    }
+    const governmentAmount = Math.round(total * governmentRateBps / 10000);
+    const customerAmount = total - governmentAmount;
+    if (data.paymentReceived < customerAmount) fail('จำนวนเงินที่รับจากลูกค้าไม่เพียงพอ');
+    const sale = await tx.sale.create({ data: { requestId: data.requestId, totalAmount: total, discount: data.discount, paymentReceived: data.paymentReceived, change: data.paymentReceived - customerAmount, paymentMethod: data.paymentMethod, governmentRateBps, governmentAmount, customerAmount, cashier: res.locals.user.name, items: { create: items } }, include: { items: true } });
     for (const item of items) await tx.stockMovement.create({ data: { productId: item.productId, type: 'out', quantity: -item.quantity, note: `ขาย #${sale.id}`, actor: res.locals.user.name } });
     return sale;
   });
@@ -124,7 +137,7 @@ app.post('/api/sales/:id/return', owner, async (req, res) => {
       await tx.product.update({ where: { id: item.productId }, data: { stockQty: { increment: item.quantity } } });
       await tx.stockMovement.create({ data: { productId: item.productId, type: 'return', quantity: item.quantity, note: `คืน #${original.id}: ${reason}`, actor: res.locals.user.name } });
     }
-    return { refund: original.totalAmount };
+    return { refund: original.customerAmount, governmentReversal: original.governmentAmount };
   }); res.json(sale);
 });
 function dateKey(date: Date) { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date); }
@@ -148,13 +161,13 @@ export async function report(period: string, date: string) {
     for (const i of s.items) { const row = sellers.get(i.productId) ?? { name: i.name, quantity: 0, revenue: 0 }; row.quantity += i.quantity; row.revenue += i.subtotal; sellers.set(i.productId, row); }
   }
   const ranked = [...sellers.values()].sort((a, b) => b.quantity - a.quantity);
-  return { total: valid.reduce((v, s) => v + s.totalAmount, 0), bills: valid.length, profit: valid.reduce((v, s) => v + s.totalAmount - s.items.reduce((c, i) => c + i.costPrice * i.quantity, 0), 0), returns: sales.filter(s => s.returnedAt).length, chart: Object.entries(buckets).sort(([a], [b]) => a.localeCompare(b)).map(([label, amount]) => ({ label, amount: amount / 100 })), top: ranked.filter(p => p.quantity > 0).slice(0, 5), bottom: [...ranked].reverse().slice(0, 5) };
+  return { customerTotal: valid.reduce((sum, sale) => sum + sale.customerAmount, 0), governmentTotal: valid.reduce((sum, sale) => sum + sale.governmentAmount, 0), total: valid.reduce((v, s) => v + s.totalAmount, 0), bills: valid.length, profit: valid.reduce((v, s) => v + s.totalAmount - s.items.reduce((c, i) => c + i.costPrice * i.quantity, 0), 0), returns: sales.filter(s => s.returnedAt).length, chart: Object.entries(buckets).sort(([a], [b]) => a.localeCompare(b)).map(([label, amount]) => ({ label, amount: amount / 100 })), top: ranked.filter(p => p.quantity > 0).slice(0, 5), bottom: [...ranked].reverse().slice(0, 5) };
 }
 app.get('/api/reports', owner, async (req, res) => res.json(await report(String(req.query.period ?? 'day'), String(req.query.date ?? dateKey(new Date())))));
 app.get('/api/reports/export', owner, async (req, res) => {
   const period = String(req.query.period ?? 'day'); const date = String(req.query.date ?? dateKey(new Date())); const data = await report(period, date);
   res.setHeader('Content-Type', 'text/csv; charset=utf-8'); res.setHeader('Content-Disposition', `attachment; filename="sales-${period}-${date}.csv"`);
-  res.send('\uFEFFช่วงเวลา,ยอดขายสุทธิ (บาท),จำนวนบิล,กำไรขั้นต้น (บาท),บิลคืน\r\n' + `${date},${data.total / 100},${data.bills},${data.profit / 100},${data.returns}\r\n\r\nช่วง,ยอดขาย (บาท)\r\n` + data.chart.map(p => `${p.label},${p.amount}`).join('\r\n'));
+  res.send('\uFEFFช่วงเวลา,ยอดขายสุทธิ (บาท),จำนวนบิล,กำไรขั้นต้น (บาท),บิลคืน\r\n' + `${date},${data.total / 100},${data.bills},${data.profit / 100},${data.returns}\r\n\r\nช่วง,ยอดขาย (บาท)\r\n` + data.chart.map(p => `${p.label},${p.amount}`).join('\r\n') + `\r\n\r\nผู้ชำระ,ยอด (บาท)\r\nลูกค้า,${data.customerTotal / 100}\r\nรัฐช่วยจ่าย,${data.governmentTotal / 100}\r\n`);
 });
 app.post('/api/backup', owner, async (_req, res) => {
   res.json(await createBackup());

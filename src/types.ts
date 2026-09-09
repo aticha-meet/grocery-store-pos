@@ -27,8 +27,8 @@ export type CartItem = {
 };
 
 
-export type Sale = { id: string; totalAmount: number; discount: number; paymentReceived: number; change: number; cashier: string; createdAt: string; returnedAt: string | null; returnReason: string | null; items: { id: string; productId: string; name: string; quantity: number; unitPrice: number; subtotal: number }[] };
-export type Report = { total: number; bills: number; profit: number; returns: number; chart: { label: string; amount: number }[]; top: { name: string; quantity: number; revenue: number }[]; bottom: { name: string; quantity: number; revenue: number }[] };
+export type Sale = { paymentMethod: string; governmentRateBps: number; governmentAmount: number; customerAmount: number; id: string; totalAmount: number; discount: number; paymentReceived: number; change: number; cashier: string; createdAt: string; returnedAt: string | null; returnReason: string | null; items: { id: string; productId: string; name: string; quantity: number; unitPrice: number; subtotal: number }[] };
+export type Report = { customerTotal: number; governmentTotal: number; total: number; bills: number; profit: number; returns: number; chart: { label: string; amount: number }[]; top: { name: string; quantity: number; revenue: number }[]; bottom: { name: string; quantity: number; revenue: number }[] };
 export const money = (cents: number) => (cents / 100).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const baht = (cents: number) => `฿${money(cents)}`;
 export const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
