@@ -1,11 +1,11 @@
 {
   "name": "baan-ran-pos",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n API,WEB \"tsx watch --env-file-if-exists=.env server/index.ts\" \"vite --host 127.0.0.1\"",
-    "build": "tsc --noEmit && vite build && tsc -p tsconfig.server.json",
+    "build": "tsc --noEmit && vite build && node scripts/clean-server.mjs && tsc -p tsconfig.server.json",
     "start": "node --env-file-if-exists=.env dist-server/server/index.js",
     "db:generate": "prisma generate",
     "db:migrate": "node --env-file-if-exists=.env scripts/ensure-db.mjs && prisma migrate deploy",

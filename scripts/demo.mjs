@@ -26,9 +26,9 @@ migrationDb.close();
 process.env.DATABASE_URL = "file:" + path.replaceAll("\\", "/");
 process.env.PORT = "3002";
 process.env.POS_DEMO = "1";
-const { db } = await import("../dist-server/server/db.js");
-const { hashPassword } = await import("../dist-server/server/security.js");
-const { demoProducts } = await import("../dist-server/server/demo.js");
+const { db } = await import("../dist-server/server/pkg/database/database.service.js");
+const { hashPassword } = await import("../dist-server/server/pkg/users/password.service.js");
+const { demoProducts } = await import("../dist-server/server/pkg/users/demo.data.js");
 if (!(await db.user.count())) {
   await db.$transaction(async (tx) => {
     await tx.user.create({

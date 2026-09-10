@@ -1,9 +1,9 @@
 import express from "express";
 import { resolve } from "node:path";
 import { app } from "./app.js";
-import { db } from "./db.js";
-import { backupDaily } from "./backup.js";
-import { CALL_ENV } from "./config/call-env.js";
+import { db } from "./pkg/database/database.service.js";
+import { backupDaily } from "./pkg/backup/backup.service.js";
+import { CALL_ENV } from "./config/environment.js";
 await db.$queryRawUnsafe("PRAGMA journal_mode = WAL");
 await db.$executeRawUnsafe("PRAGMA synchronous = FULL");
 await db.$queryRawUnsafe("PRAGMA busy_timeout = 5000");

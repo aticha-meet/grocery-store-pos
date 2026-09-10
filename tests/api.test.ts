@@ -17,8 +17,9 @@ for (const m of readdirSync("prisma/migrations", { withFileTypes: true })
     readFileSync("prisma/migrations/" + m.name + "/migration.sql", "utf8"),
   );
 sqlite.close();
-const { app, report } = await import("../server/app.js");
-const { db } = await import("../server/db.js");
+const { app } = await import("../server/app.js");
+const { report } = await import('../server/pkg/reports/reports.service.js');
+const { db } = await import("../server/pkg/database/database.service.js");
 const owner = request.agent(app);
 const cashier = request.agent(app);
 const base = {
@@ -76,6 +77,27 @@ test("reject unauthenticated requests, repeated setup, foreign origins and cashi
   await cashier.get("/api/reports").expect(403);
   await cashier.post("/api/backup").expect(403);
   await owner.post("/api/products").send(base).expect(409);
+});
+test("public routes, user guards and session invalidation survive module composition", async () => {
+  await request(app).get('/api/health').expect(200);
+  const anonymous = await request(app).get('/api/session').expect(200);
+  assert.equal(anonymous.body.user, null);
+  assert.equal(anonymous.body.needsSetup, false);
+  await request(app).get('/api/users').expect(401);
+  await cashier.get('/api/users').expect(403);
+  const users = await owner.get('/api/users').expect(200);
+  assert.equal(users.body.length, 2);
+  assert.ok(users.body.every((user: Record<string, unknown>) => !('passwordHash' in user)));
+  const login = await request(app).post('/api/login')
+    .send({ username: 'cashier', password: 'test-password' }).expect(200);
+  const cookie = login.headers['set-cookie'][0];
+  assert.match(cookie, /HttpOnly/);
+  assert.match(cookie, /SameSite=Strict/);
+  const token = cookie.split(';')[0];
+  const session = await request(app).get('/api/session').set('Cookie', token).expect(200);
+  assert.equal(session.body.user.username, 'cashier');
+  await request(app).post('/api/logout').set('Cookie', token).expect(200);
+  await request(app).get('/api/products').set('Cookie', token).expect(401);
 });
 test("checkout uses integer money, atomic stock ledger and idempotent retry", async () => {
   const payload = {

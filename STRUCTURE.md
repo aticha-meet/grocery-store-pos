@@ -20,11 +20,20 @@ Store-app/
 │
 ├── server/                 # Backend (Express + TypeScript)
 │   ├── index.ts            # Entry point: HTTP server, static files, lifecycle
-│   ├── app.ts              # Express app: ทุก API routes
-│   ├── db.ts               # Prisma Client instance
-│   ├── security.ts         # Password hashing (scrypt)
-│   ├── backup.ts           # Backup อัตโนมัติรายวัน + manual backup
-│   └── demo.ts             # ข้อมูลสินค้าตัวอย่างสำหรับ demo
+│   ├── app.ts              # Express app: middleware + ประกอบ modules
+│   └── pkg/                # API แยกตาม feature
+│       ├── users/          # controller, service, module + password/demo
+│       ├── health/         # controller, service, module
+│       ├── products/       # controller, service, module
+│       ├── stock/          # controller, service, module
+│       ├── payments/       # controller, service, module
+│       ├── sales/          # controller, service, module
+│       ├── reports/        # controller, service, module
+│       ├── backup/         # controller, service, module
+│       ├── database/       # Prisma singleton
+│       ├── config/         # Environment
+│       ├── shared/         # Validation
+│       └── http/           # HTTP middleware + error handler
 │
 ├── prisma/                 # Database schema & migrations
 │   ├── schema.prisma       # Prisma schema (SQLite)
@@ -81,9 +90,10 @@ Store-app/
                       │ HTTP /api/*
 ┌─────────────────────▼───────────────────────────┐
 │              Express Server (Node.js)            │
-│  server/app.ts — REST API routes                │
-│  server/security.ts — Auth (scrypt)             │
-│  server/backup.ts — Daily auto backup           │
+│  server/app.ts — middleware + module composition │
+│  server/pkg/users — controller/service      │
+│  server/pkg/users/password.service.ts — Auth (scrypt)             │
+│  server/pkg/backup/backup.service.ts — Daily auto backup           │
 └─────────────────────┬───────────────────────────┘
                       │ Prisma ORM
 ┌─────────────────────▼───────────────────────────┐
@@ -94,6 +104,16 @@ Store-app/
 ```
 
 **Desktop Mode (Tauri):** Express server ถูก bundle เป็น binary ไว้ใน `src-tauri/resources/` และถูกเรียกใช้จาก Rust เมื่อเปิดแอป
+
+### รูปแบบ API package
+
+แต่ละ feature ใหม่ควรมีโฟลเดอร์ของตัวเอง เช่น `server/pkg/users/`:
+
+- `*.controller.ts` รับ HTTP request/response และแปลงผลลัพธ์เป็น JSON
+- `*.service.ts` เก็บ validation, business logic, Prisma และ security ที่เกี่ยวข้อง
+- `*.module.ts` สร้าง service/controller และ register routes กับ Express
+
+`server/app.ts` จึงทำหน้าที่ประกอบ middleware และ modules เป็นหลัก ไม่ควรเพิ่ม business logic ของ feature ใหม่ลงในไฟล์เดียวอีก
 
 ---
 
@@ -422,3 +442,5 @@ Response → แสดง receipt + ล้างตะกร้า
 ---
 
 *เอกสารนี้สร้างจากการวิเคราะห์โค้ดอัตโนมัติ — อัปเดตล่าสุด: กันยายน 2026*
+
+รายละเอียดการแยก API และวิธีเพิ่ม feature: [server/pkg/README.md](server/pkg/README.md)

@@ -12,8 +12,9 @@ sql.exec(readFileSync('prisma/migrations/20260907042930_init/migration.sql','utf
 sql.exec("INSERT INTO Sale (id,requestId,totalAmount,paymentReceived,change,cashier) VALUES ('legacy','legacy',100,200,100,'Old owner')");
 for (const m of readdirSync('prisma/migrations', {withFileTypes:true}).filter(m=>m.isDirectory() && m.name !== '20260907042930_init').sort((a,b)=>a.name.localeCompare(b.name))) sql.exec(readFileSync(`prisma/migrations/${m.name}/migration.sql`,'utf8'));
 sql.close();
-const { app, report } = await import('../server/app.js');
-const { db } = await import('../server/db.js');
+const { app } = await import('../server/app.js');
+const { report } = await import('../server/pkg/reports/reports.service.js');
+const { db } = await import('../server/pkg/database/database.service.js');
 const owner = request.agent(app); const cashier = request.agent(app);
 let productId: string;
 before(async () => {

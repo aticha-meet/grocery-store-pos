@@ -50,4 +50,6 @@ for (const name of readdirSync("prisma/migrations", { withFileTypes: true })
 sql.close();
 process.env.DATABASE_URL = "file:" + resolve(database).replaceAll("\\", "/");
 process.env.BACKUP_DIR = join(data, "backups");
+// The Tauri launcher probes and opens this IPv4 loopback address.
+process.env.hostname = "127.0.0.1";
 await import("../dist-server/server/index.js");

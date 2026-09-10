@@ -1,9 +1,13 @@
-import { mkdirSync, cpSync, copyFileSync, readFileSync } from 'node:fs';
-import { resolve, join, dirname } from 'node:path';
+import { mkdirSync, cpSync, copyFileSync, readFileSync, rmSync } from 'node:fs';
+import { resolve, join, dirname, relative, isAbsolute } from 'node:path';
 import { createRequire } from 'node:module';
 if (process.platform !== 'win32') throw new Error('This packaging script targets Windows x64.');
 const destination = resolve('src-tauri/resources');
 mkdirSync(destination, { recursive: true });
+const serverOutput = resolve(destination, 'dist-server');
+const within = relative(destination, serverOutput);
+if (within !== 'dist-server' || isAbsolute(within)) throw new Error('Invalid packaged server path');
+rmSync(serverOutput, { recursive: true, force: true });
 for (const directory of ['dist', 'dist-server', 'desktop', 'prisma/migrations']) cpSync(directory, join(destination, directory), { recursive: true });
 copyFileSync(process.execPath, join(destination, 'node.exe'));
 copyFileSync('package.json', join(destination, 'package.json'));

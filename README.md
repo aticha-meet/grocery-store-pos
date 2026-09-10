@@ -147,6 +147,20 @@ npm run desktop:build
 
 ตัว Desktop เปิด/ปิด backend อัตโนมัติพร้อมหน้าต่าง และตรวจ parent process เพื่อป้องกัน backend ค้างเมื่อปิดผิดปกติ
 
+### ออกเวอร์ชันใหม่
+
+แก้เลขเวอร์ชันให้ตรงกันใน `package.json`, `src-tauri/tauri.conf.json` และ `src-tauri/Cargo.toml` แล้วรันคำสั่งนี้จาก PowerShell:
+
+```powershell
+npm ci                 # ใช้เฉพาะเมื่อเปลี่ยนเครื่องหรือ lockfile เปลี่ยน
+npm run db:migrate     # ใช้เมื่อมี migration ใหม่
+npm run build          # ตรวจ TypeScript + build frontend + build server
+npm test               # ตรวจ API integration tests
+npm run desktop:build  # สร้างตัวติดตั้ง Windows
+```
+
+ไฟล์ติดตั้งจะอยู่ที่ `src-tauri/target/release/bundle/nsis/` ส่วน backend ที่ build แล้วอยู่ใน `dist-server/` และ frontend อยู่ใน `dist/` การเพิ่มฟีเจอร์ API ควรเริ่มจาก package ใน `server/pkg/<ชื่อฟีเจอร์>/` แล้วให้ `*.module.ts` เป็นจุดเดียวที่นำ route ไปต่อกับ `app.ts`.
+
 ---
 
 ## 💾 สำรองและกู้คืนข้อมูล
@@ -197,11 +211,20 @@ Store-app/
 │
 ├── server/                 # Backend (Express + TypeScript)
 │   ├── index.ts            # Entry point: HTTP server, static files, lifecycle
-│   ├── app.ts              # Express app: ทุก API routes
-│   ├── db.ts                # Prisma Client instance
-│   ├── security.ts         # Password hashing (scrypt)
-│   ├── backup.ts           # Backup อัตโนมัติรายวัน + manual backup
-│   └── demo.ts              # ข้อมูลสินค้าตัวอย่างสำหรับ demo
+│   ├── app.ts              # Express app: middleware + ประกอบ modules
+│   └── pkg/                # API แยกตาม feature
+│       ├── users/          # controller, service, module + password/demo
+│       ├── health/         # controller, service, module
+│       ├── products/       # controller, service, module
+│       ├── stock/          # controller, service, module
+│       ├── payments/       # controller, service, module
+│       ├── sales/          # controller, service, module
+│       ├── reports/        # controller, service, module
+│       ├── backup/         # controller, service, module
+│       ├── database/       # Prisma singleton
+│       ├── config/         # Environment
+│       ├── shared/         # Validation
+│       └── http/           # HTTP middleware + error handler
 │
 ├── prisma/                 # Database schema & migrations
 │   ├── schema.prisma       # Prisma schema (SQLite)
@@ -258,9 +281,10 @@ Store-app/
                       │ HTTP /api/*
 ┌─────────────────────▼───────────────────────────┐
 │              Express Server (Node.js)            │
-│  server/app.ts — REST API routes                │
-│  server/security.ts — Auth (scrypt)             │
-│  server/backup.ts — Daily auto backup           │
+│  server/app.ts — middleware + module composition │
+│  server/pkg/users — controller/service      │
+│  server/pkg/users/password.service.ts — Auth (scrypt)             │
+│  server/pkg/backup/backup.service.ts — Daily auto backup           │
 └─────────────────────┬───────────────────────────┘
                       │ Prisma ORM
 ┌─────────────────────▼───────────────────────────┐
@@ -482,3 +506,5 @@ Response → แสดง receipt + ล้างตะกร้า
 รายละเอียดขอบเขต ข้อเสนอ และงานที่ต้องลองกับฮาร์ดแวร์อยู่ใน [SUGGESTIONS.md](SUGGESTIONS.md)
 
 _อัปเดตล่าสุด: กันยายน 2026_
+
+รายละเอียดการแยก API และวิธีเพิ่ม feature: [server/pkg/README.md](server/pkg/README.md)
