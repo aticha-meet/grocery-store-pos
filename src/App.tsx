@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Store,
   ShoppingBasket,
+  Banknote,
   Package,
   TriangleAlert,
   ChartNoAxesCombined,
@@ -20,9 +21,18 @@ import { POS } from "./POS";
 import { Inventory } from "./Inventory";
 import { Reports, SalesHistory, SettingsPage } from "./Management";
 import { Modal } from "./components";
-type Page = "pos" | "inventory" | "alerts" | "reports" | "sales" | "settings";
+type Page = "pos" | "billing" | "checkout" | "inventory" | "alerts" | "reports" | "sales" | "settings";
+function pageFromPath(pathname: string): Page {
+  const name = pathname.replace(/^\/+|\/+$/g, "");
+  if (name === "billing") return "checkout";
+  return (["pos", "billing", "checkout", "inventory", "alerts", "reports", "sales", "settings"] as Page[]).includes(name as Page) ? name as Page : "pos";
+}
+function pathForPage(page: Page) {
+  return `/${page}`;
+}
 const pages = [
   { id: "pos", label: "ขายหน้าร้าน", icon: ShoppingBasket },
+  { id: "billing", label: "คิดเงิน", icon: Banknote },
   { id: "inventory", label: "คลังสินค้า", icon: Package },
   { id: "alerts", label: "สินค้าใกล้หมด", icon: TriangleAlert },
   { id: "sales", label: "ประวัติการขาย", icon: ReceiptText },
@@ -32,7 +42,14 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [setup, setSetup] = useState(false);
   const [ready, setReady] = useState(false);
-  const [page, setPage] = useState<Page>("pos");
+  const [page, setPageState] = useState<Page>(() => pageFromPath(window.location.pathname));
+  const setPage = useCallback((next: Page, replace = false) => {
+    setPageState(next);
+    if (window.location.pathname !== pathForPage(next)) {
+      const method = replace ? "replaceState" : "pushState";
+      window.history[method]({}, "", pathForPage(next));
+    }
+  }, []);
   const [products, setProducts] = useState<Product[]>([]);
   const [toast, setToast] = useState<{
     message: string;
@@ -58,6 +75,7 @@ export default function App() {
         setUser(s.user);
         setSetup(s.needsSetup);
         setDemo(s.demo);
+        setPageState(pageFromPath(window.location.pathname));
         setReady(true);
       })
       .catch((e) => {
@@ -75,6 +93,11 @@ export default function App() {
     };
     window.addEventListener("session-expired", expire);
     return () => window.removeEventListener("session-expired", expire);
+  }, []);
+  useEffect(() => {
+    const onPopState = () => setPageState(pageFromPath(window.location.pathname));
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
   }, []);
   useEffect(() => {
     if (!toast) return;
@@ -169,8 +192,8 @@ export default function App() {
             .map((p) => (
               <button
                 key={p.id}
-                className={`nav-item ${page === p.id ? "active" : ""}`}
-                onClick={() => setPage(p.id)}
+                className={`nav-item ${page === p.id || (p.id === "billing" && page === "checkout") ? "active" : ""}`}
+                onClick={() => setPage(p.id === "billing" ? "checkout" : p.id)}
               >
                 <p.icon size={22} />
                 <span>{p.label}</span>
@@ -231,7 +254,7 @@ export default function App() {
             </button>
             <span>ร้านของฉัน</span>
             <span className="divider">/</span>
-            <b>{pages.find((p) => p.id === page)?.label ?? "ตั้งค่าร้าน"}</b>
+            <b>{page === "checkout" ? "คิดเงินและรับชำระ" : pages.find((p) => p.id === page)?.label ?? "ตั้งค่าร้าน"}</b>
           </div>
           <div className="topbar-right">
             <span className="local-pill">
@@ -248,10 +271,15 @@ export default function App() {
           </div>
         </header>
         <main>
-          <section hidden={page !== "pos"}>
+          <section hidden={page !== "pos" && page !== "billing" && page !== "checkout"}>
             <POS
               owner={user.role === "owner"}
-              active={page === "pos"}
+              active={page === "pos" || page === "billing" || page === "checkout"}
+              checkoutOnOpen={page === "billing" || page === "checkout"}
+              checkoutRoute={page === "checkout"}
+              billingMode={page === "billing"}
+              onCheckoutOpen={() => setPage("checkout", true)}
+              onCheckoutClose={() => setPage("pos")}
               storageKey={`cart-${user.id}`}
               products={products}
               refresh={refresh}
@@ -259,7 +287,7 @@ export default function App() {
               onAlerts={() => setPage("alerts")}
             />
           </section>
-          <div className="content-page" hidden={page === "pos"}>
+          <div className="content-page" hidden={page === "pos" || page === "billing" || page === "checkout"}>
             {(page === "inventory" || page === "alerts") && (
               <Inventory
                 products={products}

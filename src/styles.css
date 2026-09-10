@@ -9,3 +9,32 @@
 .demo-ribbon{position:fixed;bottom:0;left:0;right:0;text-align:center;background:#fcf0d6;color:#876429;border-top:1px solid #e8d2a3;font-size:11px;padding:4px 10px;z-index:100;pointer-events:none}
 .inline-error{background:#fbe7e2;color:#982e25;border:1px solid #e8b6aa;padding:12px 16px;border-radius:8px;margin:16px 0 0}.cart-empty{min-height:0;padding:25px 0}.cart-empty>div{width:68px;height:68px}.muted,.product-stock,.product-category,.cart-line-top small,.page-heading p,.payment-note,.cart-empty p{color:#66745f}.pay-button{font-size:24px}.search-box input{font-size:18px}.stock-banner{font-size:14px}.catalog .page-heading{margin-bottom:20px}.category-list{padding:15px 0}.catalog .stock-banner{margin-bottom:16px}
 .print-only{display:none}@media print{body>*:not(.print-only){display:none!important}.print-only{display:block!important;visibility:visible!important}.print-only *{visibility:visible!important}.print-only .receipt{position:static!important;width:76mm!important;margin:0!important}html,body{margin:0!important;padding:0!important;height:auto!important;min-height:0!important}}
+
+/* Compact POS controls: keep primary text at 16px and large payment amounts. */
+.sidebar .nav-item{font-size:16px;min-height:50px;color:#52634f}
+.sidebar .nav-item.active{color:#1c6246}
+.cart-header{padding:19px 20px 12px}
+.cart-header h2{font-size:18px}
+.cart-line-top b{font-size:16px}
+.cart-line-bottom,.stepper span{font-size:17px}
+.cart-line{padding:15px 0}
+.cart-totals>.spread{font-size:14px}
+.cart-total strong{font-size:30px}
+.cart-panel .pay-button{font-size:21px;min-height:58px}
+.product-art{height:106px}
+.product-info{padding:10px 12px}
+.product-info h3{font-size:16px;min-height:48px}
+.product-bottom strong{font-size:22px}
+.product-grid{gap:12px}
+.billing-barcode{padding:0 20px 14px;flex-shrink:0}
+.billing-barcode label{font-size:14px;color:#41563d;margin:0 0 7px;display:block}
+.billing-barcode-entry{display:flex;gap:7px;border-radius:8px}
+.billing-barcode-entry input{margin:0;min-width:0;flex:1;font-size:16px;min-height:46px;padding:10px}
+.billing-barcode-entry input::placeholder{color:#65735f;opacity:1}
+.billing-barcode-entry button{min-width:46px;min-height:46px;border-radius:8px;background:var(--green);color:white;display:grid;place-items:center}
+.billing-barcode-entry button:disabled{background:#e7ece3;color:#64745e}
+.billing-barcode-entry.success{outline:2px solid #28744e}
+.billing-barcode-entry.error{outline:2px solid #b14232}
+.cart-panel .cart-items{min-height:80px}
+@media(min-width:1600px){.product-art{height:120px}}
+@media(max-width:720px){.cart-panel .cart-items{min-height:180px}.sidebar .nav-item{min-height:48px}.cart-total strong{font-size:32px}}

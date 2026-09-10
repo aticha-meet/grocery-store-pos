@@ -1,4 +1,4 @@
-import { Checkout } from './Checkout';
+import { Checkout } from "./Checkout";
 import { useEffect, useRef, useState } from "react";
 import {
   Search,
@@ -27,6 +27,11 @@ import { Empty, Modal, SaleComplete } from "./components";
 type Props = {
   owner: boolean;
   active: boolean;
+  checkoutOnOpen?: boolean;
+  checkoutRoute?: boolean;
+  billingMode?: boolean;
+  onCheckoutOpen?: () => void;
+  onCheckoutClose?: () => void;
   storageKey: string;
   products: Product[];
   refresh: () => Promise<void>;
@@ -56,7 +61,13 @@ export function POS({
   onAlerts,
   active,
   storageKey,
- owner, }: Props) {
+  owner,
+  checkoutOnOpen = false,
+  checkoutRoute = false,
+  billingMode = false,
+  onCheckoutOpen,
+  onCheckoutClose,
+}: Props) {
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) ?? "[]");
@@ -78,10 +89,12 @@ export function POS({
     }
   }, [cart, storageKey]);
   const [search, setSearch] = useState("");
+  const [billingBarcode, setBillingBarcode] = useState("");
+  const billingInput = useRef<HTMLInputElement>(null);
   const [category, setCategory] = useState("ทั้งหมด");
   const [pay, setPay] = useState(() => {
     try {
-      return Boolean(localStorage.getItem(storageKey + "-pending"));
+      return checkoutOnOpen || Boolean(localStorage.getItem(storageKey + "-pending"));
     } catch {
       return false;
     }
@@ -92,6 +105,10 @@ export function POS({
   const input = useRef<HTMLInputElement>(null);
   const lastScan = useRef({ code: "", time: 0 });
   const buffer = useRef({ text: "", started: 0, last: 0 });
+  const openCheckout = () => {
+    setPay(true);
+    onCheckoutOpen?.();
+  };
   const total = cart.reduce(
     (sum, i) => sum + i.quantity * i.product.sellPrice,
     0,
@@ -158,6 +175,12 @@ export function POS({
     if (active && !pay && !sale && !clear) input.current?.focus();
   }, [active, pay, sale, clear]);
   useEffect(() => {
+    if (active && checkoutOnOpen && !pay && !sale && !clear) setPay(true);
+  }, [active, checkoutOnOpen, cart.length, pay, sale, clear]);
+  useEffect(() => {
+    if (active && !checkoutRoute && pay) setPay(false);
+  }, [active, checkoutRoute, pay]);
+  useEffect(() => {
     const listener = (event: KeyboardEvent) => {
       if (
         !active ||
@@ -175,7 +198,7 @@ export function POS({
       }
       if (event.key === "F4") {
         event.preventDefault();
-        if (cart.length) setPay(true);
+        openCheckout();
         return;
       }
       if (event.ctrlKey || event.altKey || event.metaKey) return;
@@ -212,25 +235,44 @@ export function POS({
       notify("สต็อกไม่เพียงพอ", true);
       return;
     }
-    setCart(
-      cart
+    setCart((previous) =>
+      previous
         .map((i) =>
           i.product.id === id ? { ...i, quantity: i.quantity + delta } : i,
         )
         .filter((i) => i.quantity > 0),
     );
   }
-  if (pay) return <Checkout cart={cart} storageKey={storageKey} owner={owner} onClose={() => setPay(false)} onSuccess={async result => { setSale(result); setPay(false); setCart([]); await refresh(); }} notify={notify}/>;
+  if (pay)
+    return (
+      <Checkout
+        cart={cart}
+        products={products}
+        onAddProduct={add}
+        onChangeQuantity={changeQuantity}
+        onRemoveProduct={(id) => setCart((previous) => previous.filter((item) => item.product.id !== id))}
+        storageKey={storageKey}
+        owner={owner}
+        onSuccess={async (result) => {
+          setSale(result);
+          setPay(false);
+          setCart([]);
+          onCheckoutClose?.();
+          await refresh();
+        }}
+        notify={notify}
+      />
+    );
   return (
     <div className="pos-layout">
       <section className="catalog">
         <div className="page-heading">
           <div>
-            <div className="eyebrow green">POINT OF SALE</div>
+            <div className="eyebrow green">{billingMode ? "BILLING" : "POINT OF SALE"}</div>
             <h1>
-              ขายหน้าร้าน<span className="heading-dot">.</span>
+              {billingMode ? "คิดเงิน" : "ขายหน้าร้าน"}<span className="heading-dot">.</span>
             </h1>
-            <p>วันดี ๆ เริ่มต้นด้วยการขายที่ง่ายขึ้น</p>
+            <p>{billingMode ? "เลือกสินค้าและจัดบิลได้เต็มพื้นที่ พร้อมรับชำระเมื่อพร้อม" : "วันดี ๆ เริ่มต้นด้วยการขายที่ง่ายขึ้น"}</p>
           </div>
           <span className="soft-badge">
             <ShoppingBasket size={18} />
@@ -392,6 +434,59 @@ export function POS({
             <Trash2 size={20} />
           </button>
         </div>
+        <form
+          className="billing-barcode"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const code = billingBarcode.trim();
+            if (!code) return;
+            const b = buffer.current;
+            scan(
+              code,
+              b.text.length > 2 && Date.now() - b.started < b.text.length * 80,
+            );
+            buffer.current.text = "";
+            if (products.some((product) => product.barcode === code))
+              setBillingBarcode("");
+            billingInput.current?.focus();
+            billingInput.current?.select();
+          }}
+        >
+          <label htmlFor="billing-barcode">
+            เพิ่มสินค้าเข้าบิลด้วยบาร์โค้ด
+          </label>
+          <div className={`billing-barcode-entry ${scanState ?? ""}`}>
+            <input
+              id="billing-barcode"
+              ref={billingInput}
+              value={billingBarcode}
+              placeholder="กรอกหรือสแกนบาร์โค้ด"
+              autoComplete="off"
+              onChange={(event) => setBillingBarcode(event.target.value)}
+              onKeyDown={(event) => {
+                if (
+                  event.key.length === 1 &&
+                  !event.ctrlKey &&
+                  !event.altKey &&
+                  !event.metaKey
+                ) {
+                  const now = Date.now();
+                  if (now - buffer.current.last > 100)
+                    buffer.current = { text: "", started: now, last: now };
+                  buffer.current.text += event.key;
+                  buffer.current.last = now;
+                }
+              }}
+            />
+            <button
+              type="submit"
+              aria-label="เพิ่มบาร์โค้ดเข้าบิล"
+              disabled={!billingBarcode.trim()}
+            >
+              <Plus size={20} />
+            </button>
+          </div>
+        </form>
         <div className="cart-subhead">
           <span>รายการสินค้า</span>
           <span>ราคา</span>
@@ -471,8 +566,7 @@ export function POS({
           </div>
           <button
             className="button primary pay-button"
-            disabled={!cart.length}
-            onClick={() => setPay(true)}
+            onClick={openCheckout}
           >
             <Banknote size={25} />
             <span>รับชำระเงิน</span>

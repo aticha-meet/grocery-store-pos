@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useId, type ReactNode } from "react";
 import { X, PackageOpen, Printer, Check } from "lucide-react";
-import { createPortal } from 'react-dom';
+import { createPortal } from "react-dom";
 import { baht, dateTime, type Sale } from "./types";
 export function Modal({
   title,
@@ -15,14 +15,22 @@ export function Modal({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   useEffect(() => {
-    const notice = (event: Event) => { const detail = (event as CustomEvent<{ message: string; error: boolean }>).detail; if (detail.error) setError(detail.message); };
-    window.addEventListener('pos-notice', notice); return () => window.removeEventListener('pos-notice', notice);
+    const notice = (event: Event) => {
+      const detail = (event as CustomEvent<{ message: string; error: boolean }>)
+        .detail;
+      if (detail.error) setError(detail.message);
+    };
+    window.addEventListener("pos-notice", notice);
+    return () => window.removeEventListener("pos-notice", notice);
   }, []);
   useEffect(() => {
     ref.current?.showModal();
-    (ref.current?.querySelector<HTMLInputElement>('[data-autofocus]') ?? ref.current?.querySelector<HTMLInputElement>('input:not([disabled])'))?.focus();
+    (
+      ref.current?.querySelector<HTMLInputElement>("[data-autofocus]") ??
+      ref.current?.querySelector<HTMLInputElement>("input:not([disabled])")
+    )?.focus();
     const dialog = ref.current;
     return () => dialog?.close();
   }, []);
@@ -50,7 +58,11 @@ export function Modal({
         </button>
       </div>
       {children}
-      {error && <p role="alert" className="inline-error">{error}</p>}
+      {error && (
+        <p role="alert" className="inline-error">
+          {error}
+        </p>
+      )}
     </dialog>
   );
 }
@@ -64,7 +76,17 @@ export function Empty({ title, detail }: { title: string; detail?: string }) {
   );
 }
 export function Receipt({ sale }: { sale: Sale }) {
-  return <><ReceiptBody sale={sale}/>{createPortal(<div className="print-only" aria-hidden="true"><ReceiptBody sale={sale}/></div>, document.body)}</>;
+  return (
+    <>
+      <ReceiptBody sale={sale} />
+      {createPortal(
+        <div className="print-only" aria-hidden="true">
+          <ReceiptBody sale={sale} />
+        </div>,
+        document.body,
+      )}
+    </>
+  );
 }
 function ReceiptBody({ sale }: { sale: Sale }) {
   return (
@@ -109,7 +131,22 @@ function ReceiptBody({ sale }: { sale: Sale }) {
         <span>เงินทอน</span>
         <span>{baht(sale.change)}</span>
       </div>
-      {sale.paymentMethod === 'thai_help_thai' && <><hr/><p><b>ไทยช่วยไทย</b></p><div className="spread"><span>รัฐจ่าย {sale.governmentRateBps / 100}%</span><b>{baht(sale.governmentAmount)}</b></div><div className="spread"><span>ลูกค้าจ่าย {(10000 - sale.governmentRateBps) / 100}%</span><b>{baht(sale.customerAmount)}</b></div></>}
+      {sale.paymentMethod === "thai_help_thai" && (
+        <>
+          <hr />
+          <p>
+            <b>ไทยช่วยไทย</b>
+          </p>
+          <div className="spread">
+            <span>รัฐจ่าย {sale.governmentRateBps / 100}%</span>
+            <b>{baht(sale.governmentAmount)}</b>
+          </div>
+          <div className="spread">
+            <span>ลูกค้าจ่าย {(10000 - sale.governmentRateBps) / 100}%</span>
+            <b>{baht(sale.customerAmount)}</b>
+          </div>
+        </>
+      )}
       {sale.returnedAt && <p>คืนทั้งบิลแล้ว: {sale.returnReason}</p>}
       <hr />
       <p>
